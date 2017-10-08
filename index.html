@@ -5,8 +5,11 @@
 .province { fill : #ccc; stroke : #ffe; stroke-width: 2px;   stroke-dasharray: 2,2; stroke-linejoin: round;}
 .region-labels { fill: #aaa; font-size : 14px; font-weight : bold; }
 .city-labels { font-size : 12px; }
-.bombings { fill: #f00; fill-opacity: 0.25; }
-
+.bombings { fill: #f00; fill-opacity: 0.15; }
+.legend-text { font-size: 10px; }
+.legend-line { fill: #ccc; stroke-width: 1px; stroke: #ccc; shape-rendering: crispEdges; opacity: 1; }
+.legend { stroke: #ccc; stroke-dasharray: 4, 2; }
+.map-title { font-size: 16px; font-weight: bold; fill: #333; }
 </style>
 <body>
 <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -43,7 +46,7 @@ d3.json("PRK_adm1.topojson", function(error, nk) {
                .projection(projection);
                
   var provinces = topojson.feature(nk, nk.objects.PRK_adm1);
-    
+  
   svg.append("path")
       .datum(provinces)
       .attr("d", path);
@@ -63,6 +66,52 @@ d3.json("PRK_adm1.topojson", function(error, nk) {
     .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
     .text(function(d) { return d.properties.NAME_1; });
     
+  d3.csv("bombs.csv", function(error, bombs) {
+    if (error) return console.error(error);
+    console.log(bombs);
+    
+    svg.selectAll(".bombings")
+    .data(bombs)
+    .enter()
+    .append("circle")
+    .attr("class", "bombings")
+    .attr("cy", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[1]; })
+    .attr("cx", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[0]; })
+    .attr("r", function (d) { return 1 + Math.pow((d.CALCULATED_BOMBLOAD_LBS / 2000), .6); });
+    });
+    
+  svg.selectAll(".legend")
+    .data([2000, 50000, 400000])
+    .enter()
+    .append("circle")
+    .attr("class", "bombings legend")
+    .attr("cx", 520)
+    .attr("cy", function (d) { return 500 - (1 + Math.pow((d / 2000), .6)); })
+    .attr("r", function (d) { return 1 + Math.pow((d / 2000), .6); });
+  svg.selectAll(".legend-line")
+    .data([2000, 50000, 400000])
+    .enter()
+    .append("line")
+    .attr("class", "legend-line")
+    .attr("x1", 520)
+    .attr("x2", 580)
+    .attr("y1", function (d) { return 500 - (1 + Math.pow((d / 2000), .6)) * 2; })
+    .attr("y2", function (d) { return 500 - (1 + Math.pow((d / 2000), .6)) * 2; });
+  svg.selectAll(".legend-text")
+    .data([2000, 50000, 400000])
+    .enter()
+    .append("text")
+    .attr("class", "legend-text")
+    .attr("x", 590)
+    .attr("y", function (d) { return 500 - (1 + Math.pow((d / 2000), .6)) * 2; })
+    .text(function (d) { var textbit = d === 2000 ? " ton" : " tons"; return (d / 2000).toString() + textbit; });
+    
+  svg.append("text")
+    .attr("class", "map-title")
+    .attr("x", 40)
+    .attr("y", 80)
+    .text("U.S. Air Force Bombings on North Korea (1951-1952)");
+
   svg.selectAll("cities")
     .data(major_cities)
     .enter()
@@ -81,20 +130,6 @@ d3.json("PRK_adm1.topojson", function(error, nk) {
     .attr("dy", "-1em")
     .text(function (d) { return d.city; })
     .style("text-anchor", "middle");
-    
-  d3.csv("bombs.csv", function(error, bombs) {
-    if (error) return console.error(error);
-    console.log(bombs);
-    
-    svg.selectAll(".bombings")
-    .data(bombs)
-    .enter()
-    .append("circle")
-    .attr("class", "bombings")
-    .attr("cy", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[1]; })
-    .attr("cx", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[0]; })
-    .attr("r", function (d) { return Math.sqrt(1 + d.CALCULATED_BOMBLOAD_LBS / 2000); });
-    });
     
 });
 
