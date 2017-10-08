@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.province { fill : #ccc; stroke : #ffe; stroke-width: 2px;   stroke-dasharray: 2,2; stroke-linejoin: round;}
+.region-labels { fill: #aaa; font-size : 14px; font-weight : bold; }
+.city-labels { font-size : 12px; }
+.bombings { fill: #f00; fill-opacity: 0.25; }
+
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+var major_cities = [{"city" : "Pyongyang", "coordinates" : [125.75, 39.033]},
+                    {"city" : "Hamhŭng", "coordinates" : [127.535556, 39.91250]},
+                    {"city" : "Namp'o", "coordinates" : [125.399998, 38.733304]},
+                    {"city" : "Wŏnsan ", "coordinates" : [127.446111, 39.1475]},
+                    {"city" : "Sinŭiju", "coordinates" : [124.4, 40.1]},
+                    {"city" : "Tanch'ŏn", "coordinates" : [128.911, 40.458]},
+                    {"city" : "Kaech'ŏn", "coordinates" : [125.903663052, 39.69249723]},
+                    {"city" : "Kaesŏng", "coordinates" : [126.55444, 37.97083]},
+                    {"city" : "Sariwŏn", "coordinates" : [125.75444, 38.50778]}];
+
+var width = 680,
+    height = 780;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+
+d3.json("PRK_adm1.topojson", function(error, nk) {
+  if (error) return console.error(error);
+  console.log(nk);
+  
+  var projection = d3.geo.mercator()
+        .center([127.5, 40.3])
+        .scale(5800)
+        .translate([width/2, height/2]);
+  
+  var path = d3.geo.path()
+               .projection(projection);
+               
+  var provinces = topojson.feature(nk, nk.objects.PRK_adm1);
+    
+  svg.append("path")
+      .datum(provinces)
+      .attr("d", path);
+      
+  svg.selectAll(".province")
+    .data(topojson.feature(nk, nk.objects.PRK_adm1).features)
+    .enter().append("path")
+    .attr("class", function(d) { return "province " + d.properties.HASC_1; })
+    .attr("d", path)
+    
+  svg.selectAll(".region-labels")
+    .data(topojson.feature(nk, nk.objects.PRK_adm1).features)
+    .enter()
+    .append("text")
+    .attr("class", "region-labels")
+    .attr("dx", "-2em")
+    .attr("transform", function(d) { return "translate(" + path.centroid(d) + ")"; })
+    .text(function(d) { return d.properties.NAME_1; });
+    
+  svg.selectAll("cities")
+    .data(major_cities)
+    .enter()
+    .append("circle")
+    .attr("cy", function (d) { return projection(d.coordinates)[1]; })
+    .attr("cx", function (d) { return projection(d.coordinates)[0]; })
+    .attr("r", 3)
+    .style("fill", "black");
+    
+  svg.selectAll(".city-labels")
+    .data(major_cities)
+    .enter()
+    .append("text")
+    .attr("transform", function(d) { return "translate(" + projection(d.coordinates) + ")"; })
+    .attr("class", "city-labels")
+    .attr("dy", "-1em")
+    .text(function (d) { return d.city; })
+    .style("text-anchor", "middle");
+    
+  d3.csv("bombs.csv", function(error, bombs) {
+    if (error) return console.error(error);
+    console.log(bombs);
+    
+    svg.selectAll(".bombings")
+    .data(bombs)
+    .enter()
+    .append("circle")
+    .attr("class", "bombings")
+    .attr("cy", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[1]; })
+    .attr("cx", function (d) { return projection([parseFloat(d.TGT_LONGITUDE_WGS84), parseFloat(d.TGT_LATITUDE_WGS84)])[0]; })
+    .attr("r", function (d) { return Math.sqrt(1 + d.CALCULATED_BOMBLOAD_LBS / 2000); });
+    });
+    
+});
+
+</script>
